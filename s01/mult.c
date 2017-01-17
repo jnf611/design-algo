@@ -3,6 +3,10 @@
 
 typedef  int (*mult_funct_t)(int, int);
 
+static inline int max(int a, int b)
+{
+	return (a > b) ? a : b;
+}
 
 void print_array(int *array, size_t size)
 {
@@ -101,6 +105,63 @@ int naive_mult(int a, int b)
 	return ret;
 }
 
+/**
+ * a * b = (c*10^i + d) * (e*10^i + f)
+ *       = ce*10^i2 + (cf + de)*10^i + df
+ *
+ *    99 = 81*100 + 162*10 + 81 =    81
+ *    99 =                         1620
+ *   891                           8100
+ *  891                            9801  
+ *  9801 
+ **/
+int divide_conquer_mult(int a, int b)
+{
+	if (a < 10 && b < 10)
+	{
+		return a * b;
+	}
+	
+	int nb_a = nb_figure(a);
+	int nb_b = nb_figure(b);
+	int i = max(nb_a, nb_b) / 2;
+
+	int *array_a = nb_to_int_array(a);
+	int d = int_array_to_nb(&array_a[0], i);
+	int c = int_array_to_nb(&array_a[i], nb_a-i);
+	free(array_a);
+
+	int *array_b = nb_to_int_array(b);
+	int f = int_array_to_nb(&array_b[0], i);
+	int e = int_array_to_nb(&array_b[i], nb_b-i);
+	free(array_b);
+
+	printf("a=%d, b=%d\n", a, b);
+	printf("c=%d, d=%d, e=%d, f=%d\n", c, d, e, f);
+	
+	int ce = divide_conquer_mult(c, e);
+	int cf = divide_conquer_mult(c, f);
+	int de = divide_conquer_mult(d, e);
+	int df = divide_conquer_mult(d, f);
+
+	int size = nb_a + nb_b + 2;
+	int *array_ret = calloc(nb_a + nb_b + 2);
+	int *array_tmp = nb_to_int_array(df);
+	int j;
+	for (j=0; j<size; ++j)
+		array_ret[j] = array_tmp[j];
+	free(array_tmp);
+	array_ret = nb_to_int_array(cf);
+	int carry = 0;
+	for (j = i; j < size; ++j)
+	{
+		int tmp = array_ret[j] + 
+	}
+	free(array_ret);
+
+	return 0;
+}
+
 int test_mult(mult_funct_t mult)
 {
 	int ret;
@@ -129,10 +190,12 @@ int test_mult(mult_funct_t mult)
 
 int main(void)
 {
-	mult_funct_t mult = naive_mult;
+	/*if (test_mult(naive_mult))
+		return 1;*/
 
-	if (test_mult(mult))
-		return 1;
-
+	/*if (test_mult(divide_conquer_mult))
+		return 1;*/
+	divide_conquer_mult(15,76);
+	
 	return 0;
 }
