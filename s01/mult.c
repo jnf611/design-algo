@@ -1,106 +1,132 @@
 #include <stdlib.h>
 #include <stdio.h>
-
-typedef  int (*mult_funct_t)(int, int);
+#include <string.h>
 
 static inline int max(int a, int b)
 {
 	return (a > b) ? a : b;
 }
 
-void print_array(int *array, size_t size)
-{
-	int i;
+typedef char *(*mult_funct_t)(const char *, const char *);
 
-	for (i = 0; i < size - 1; ++i)
-		printf("%d, ", array[i]);
-	printf("%d\n", array[size - 1]);
+typedef struct {
+	size_t size;
+	char *tab;
+} array_number_t;
+
+void array_number_print(const array_number_t *n)
+{
+	size_t i;
+	size_t size = n->size;
+
+	for (i = 0; i < size-1; ++i)
+		printf("%d, ", n->tab[i]);
+	printf("%d\n", n->tab[size-1]);
 }
 
-size_t nb_figure(int n)
+array_number_t *array_number_create(array_number_t *n, size_t size)
 {
-	size_t nb = 0;
+	n->size = size;
+	n->tab = calloc(n->size, sizeof(*(n->tab)));
 
-	while (n) {
-		nb++;
-		n = n / 10;
-	}
-
-	return nb;
-}
-
-int *nb_to_int_array(int n)
-{
-	size_t size = nb_figure(n);
-	int *array = malloc(size * sizeof(int));
-
-	if (array ==  NULL)
+	if (n->tab == NULL) {
+		printf("%s: calloc failed for size:%u\n", __func__,
+			n->size * sizeof(*(n->tab)));
 		return NULL;
-
-	size_t i = 0;
-
-	while (n) {
-		array[i] = n % 10;
-		n = n / 10;
-		++i;
 	}
-
-	return array;
-}
-
-int int_array_to_nb(int *array, size_t size)
-{
-	int i;
-	int n = 0;
-
-	for (i = size-1; i >= 0; --i)
-		n = n * 10 + array[i];
 
 	return n;
 }
 
-int naive_mult(int a, int b)
+array_number_t *array_number_create_from_string(array_number_t *n,
+												const char *s)
 {
+	size_t size = strlen(s);
+
+	n->size = size;
+	n->tab = calloc(n->size, sizeof(*(n->tab)));
+	if (n->tab == NULL)
+		return NULL;
+
+	size_t i = 0;
+
+	for (i = 0; i < size; ++i)
+		n->tab[size - 1 - i] = s[i] - '0';
+
+	return n;
+}
+
+char *array_number_to_string(const array_number_t *n)
+{
+	// get first non null value
+	size_t size = n->size;
+
+	while ((size - 1 != 0) && (n->tab[size - 1] == 0))
+		size--;
+
+	// adding 1 char to ensure c-string null termination
+	char *s = malloc((size + 1) * sizeof(char));
+
+	if (s == NULL) {
+		printf("%s: cannot allocate string\n", __func__);
+		return NULL;
+	}
+
+	size_t i;
+
+	for (i = 0; i < size; ++i)
+		s[i] = n->tab[size-1-i] + '0';
+	s[size] = '\0';
+
+	return s;
+}
+
+char *naive_mult(const char *string_a, const char *string_b)
+{
+	array_number_t a;
+	array_number_t b;
+	array_number_t product;
+
+	if (array_number_create_from_string(&a, string_a) == NULL) {
+		printf("unable to create a\n");
+		return NULL;
+	}
+	if (array_number_create_from_string(&b, string_b) == NULL) {
+		printf("unable to create b\n");
+		return NULL;
+	}
+	if (array_number_create(&product, a.size + b.size + 2) == NULL) {
+		printf("unable to create product\n");
+		return NULL;
+	}
+
 	int i, j;
-	int nb_a = nb_figure(a);
-	int nb_b = nb_figure(b);
-	int nb_p = nb_a + nb_b + 1;
 
-	int *line = calloc(nb_p, sizeof(int));
-
-	if (line == NULL)
-		return 0;
-
-	int *array_a = nb_to_int_array(a);
-	int *array_b = nb_to_int_array(b);
-
-	if (array_a == NULL || array_b == NULL)
-		return 0;
-
-	for (i = 0; i < nb_b; i++) {
-		for (j = 0; j < nb_a; ++j) {
+	for (i = 0; i < b.size; i++) {
+		for (j = 0; j < a.size; ++j) {
 			// product
-			int p = array_b[i] * array_a[j];
+			char p = a.tab[i] * b.tab[j];
 
-			// addition
+			// addition, with carry report if needed
 			size_t idx = i+j;
-			int tmp = line[idx] + p;
+			char tmp = product.tab[idx] + p;
 
-			// report carry if needed
-			while (tmp > 10) {
-				line[idx] = tmp % 10;
+			while (tmp >= 10) {
+				product.tab[idx] = (tmp % 10);
 				idx++;
-				tmp = line[idx] + tmp/10;
+				tmp = product.tab[idx] + tmp/10;
 			}
-			line[idx] = tmp;
+			product.tab[idx] = tmp;
+			//array_number_print(&product);
 		}
 	}
 
-	int ret = int_array_to_nb(line, nb_p);
+	// reconvert to ascii
+	char *ret = array_number_to_string(&product);
 
-	free(array_a);
-	free(array_b);
-	free(line);
+	free(a.tab);
+	free(b.tab);
+	free(product.tab);
 
 	return ret;
 }
@@ -115,25 +141,25 @@ int naive_mult(int a, int b)
  *  891                            9801  
  *  9801 
  **/
-int divide_conquer_mult(int a, int b)
+/*int divide_conquer_mult(int a, int b)
 {
 	if (a < 10 && b < 10)
 	{
 		return a * b;
 	}
 	
-	int nb_a = nb_figure(a);
-	int nb_b = nb_figure(b);
-	int i = max(nb_a, nb_b) / 2;
+	int size_a = nb_figure(a);
+	int size_b = nb_figure(b);
+	int i = max(size_a, size_b) / 2;
 
 	int *array_a = nb_to_int_array(a);
 	int d = int_array_to_nb(&array_a[0], i);
-	int c = int_array_to_nb(&array_a[i], nb_a-i);
+	int c = int_array_to_nb(&array_a[i], size_a-i);
 	free(array_a);
 
 	int *array_b = nb_to_int_array(b);
 	int f = int_array_to_nb(&array_b[0], i);
-	int e = int_array_to_nb(&array_b[i], nb_b-i);
+	int e = int_array_to_nb(&array_b[i], size_b-i);
 	free(array_b);
 
 	printf("a=%d, b=%d\n", a, b);
@@ -144,8 +170,8 @@ int divide_conquer_mult(int a, int b)
 	int de = divide_conquer_mult(d, e);
 	int df = divide_conquer_mult(d, f);
 
-	int size = nb_a + nb_b + 2;
-	int *array_ret = calloc(nb_a + nb_b + 2);
+	int size = size_a + size_b + 2;
+	int *array_ret = calloc(size_a + size_b + 2);
 	int *array_tmp = nb_to_int_array(df);
 	int j;
 	for (j=0; j<size; ++j)
@@ -160,28 +186,35 @@ int divide_conquer_mult(int a, int b)
 	free(array_ret);
 
 	return 0;
-}
+}*/
 
 int test_mult(mult_funct_t mult)
 {
-	int ret;
-	int expect;
-	int i, j;
-	int max = 10000;
-	int prev_i = 1;
+	size_t i, j;
+	size_t max = 10000;
+	size_t prev_i = 1;
+	char string_i[max];
+	char string_j[max];
+	size_t max_expect = 2*max+2;
+	char string_expect[max_expect];
 
 	for (i = 0; i < max; ++i) {
+		snprintf(string_i, max, "%u", i);
 		if (i / prev_i >= 10) {
 			printf("i=%d\n", i);
 			prev_i = i;
 		}
 		for (j = 0; j < max; ++j) {
-			ret = mult(i, j);
-			expect = i * j;
-			if (ret != expect) {
-				printf("%d != %d * %d = %d\n", ret, i, j, expect);
+			snprintf(string_j, max, "%u", j);
+			char* ret = mult(string_i, string_j);
+			int expect = i * j;
+			snprintf(string_expect, max_expect, "%u", expect);
+			if (strcmp(ret, string_expect)) {
+				printf("%s != %d * %d = %s\n", ret, i, j, string_expect);
+				free(ret);
 				return 1;
 			}
+			free(ret);
 		}
 	}
 
@@ -190,12 +223,22 @@ int test_mult(mult_funct_t mult)
 
 int main(void)
 {
-	/*if (test_mult(naive_mult))
-		return 1;*/
+	array_number_t n;
+
+	array_number_create_from_string(&n, "1");
+	array_number_print(&n);
+	char *ret = array_number_to_string(&n);
+
+	printf("%s\n", ret);
+	free(ret);
+	char *ret2 = naive_mult("1", "3");
+
+	printf("%s : %d * %d = %d\n", ret2, 54, 78, 54*78);
+	free(ret2);
+	if (test_mult(naive_mult))
+		return 1;
 
 	/*if (test_mult(divide_conquer_mult))
 		return 1;*/
-	divide_conquer_mult(15,76);
-	
 	return 0;
 }
