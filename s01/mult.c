@@ -99,13 +99,13 @@ char *naive_mult(const char *string_a, const char *string_b)
 		printf("unable to create product\n");
 		return NULL;
 	}
-
+	
 	int i, j;
-
+	
 	for (i = 0; i < b.size; i++) {
 		for (j = 0; j < a.size; ++j) {
 			// product
-			char p = a.tab[i] * b.tab[j];
+			char p = a.tab[j] * b.tab[i];
 
 			// addition, with carry report if needed
 			size_t idx = i+j;
@@ -117,7 +117,6 @@ char *naive_mult(const char *string_a, const char *string_b)
 				tmp = product.tab[idx] + tmp/10;
 			}
 			product.tab[idx] = tmp;
-			//array_number_print(&product);
 		}
 	}
 
@@ -223,20 +222,18 @@ int test_mult(mult_funct_t mult)
 
 int main(void)
 {
-	array_number_t n;
-
-	array_number_create_from_string(&n, "1");
-	array_number_print(&n);
-	char *ret = array_number_to_string(&n);
-
-	printf("%s\n", ret);
+	char *ret = naive_mult("1", "10");
+	printf("%s : %d * %d = %d\n", ret, 1, 10, 1*10);
 	free(ret);
-	char *ret2 = naive_mult("1", "3");
 
-	printf("%s : %d * %d = %d\n", ret2, 54, 78, 54*78);
+	char a[] = "3141592653589793238462643383279502884197169399375105820974944592";
+	char b[] = "2718281828459045235360287471352662497757247093699959574966967627";
+	char *ret2 = naive_mult(a, b);
+	printf("%s * %s = %s\n", a, b, ret2);
 	free(ret2);
-	if (test_mult(naive_mult))
-		return 1;
+	
+	/*if (test_mult(naive_mult))
+		return 1;*/
 
 	/*if (test_mult(divide_conquer_mult))
 		return 1;*/
